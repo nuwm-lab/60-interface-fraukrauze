@@ -5,16 +5,22 @@ using System.Text;
 
 namespace OOP_Lab3
 {
-    /// <summary>
-    /// Абстрактний базовий клас для числових структур (векторів і матриць).
-    /// Містить спільні властивості та методи.
-    /// </summary>
-    public abstract class NumericStructure
+    // Інтерфейс для відображення та роботи з числовою структурою
+    public interface IStructure
     {
-        protected int _size;
-        protected double[] _elements;
+        void Display();
+        double GetMax();
+    }
 
-        // Конструктор
+    // Абстрактний базовий клас
+    public abstract class NumericStructure : IStructure
+    {
+        private int _size;
+        private double[] _elements;
+
+        public int Size => _size;  // тільки читання
+        protected double[] Elements => _elements; // доступ для похідних класів
+
         public NumericStructure(int size)
         {
             if (size <= 0)
@@ -23,153 +29,107 @@ namespace OOP_Lab3
             _size = size;
             _elements = new double[size];
             Console.OutputEncoding = Encoding.UTF8;
-            Console.WriteLine($"[Конструктор базового класу] Створено NumericStructure на {_size} елементів.");
+            Console.WriteLine($"[Створено NumericStructure на {_size} елементів]");
         }
 
-        // Деструктор
-        ~NumericStructure()
-        {
-            Console.WriteLine("[Деструктор базового класу] Об’єкт NumericStructure знищено.");
-        }
-
-        // Абстрактні методи — мають бути реалізовані в похідних класах
-        public abstract void SetElements(double[] values);
-        public abstract void SetElementsFromConsole();
-        public abstract void Display();
-
-        // Віртуальний метод із типовою реалізацією
-        public virtual double GetMax()
-        {
-            return _elements.Length > 0 ? _elements.Max() : double.NaN;
-        }
-
-        // Загальне рядкове представлення
-        public override string ToString()
-        {
-            return string.Join(", ", _elements.Select(e => e.ToString("F2")));
-        }
-    }
-
-    /// <summary>
-    /// Клас Vector4 — спадкоємець NumericStructure.
-    /// Представляє одномірний вектор на 4 елементи.
-    /// </summary>
-    public class Vector4 : NumericStructure
-    {
-        private const int DEFAULT_SIZE = 4;
-
-        public Vector4() : base(DEFAULT_SIZE)
-        {
-            Console.WriteLine("[Конструктор Vector4] Створено вектор на 4 елементи.");
-        }
-
-        ~Vector4()
-        {
-            Console.WriteLine("[Деструктор Vector4] Вектор знищено.");
-        }
-
-        public override void SetElements(double[] values)
+        public void SetElements(double[] values)
         {
             if (values == null || values.Length != _size)
-                throw new ArgumentException($"Розмір вхідного масиву ({values?.Length ?? 0}) не відповідає {_size}.");
+                throw new ArgumentException($"Розмір масиву ({values?.Length ?? 0}) не відповідає {_size}.");
 
             Array.Copy(values, _elements, _size);
-            Console.WriteLine($"Успішно встановлено {_size} елементів вектора.");
         }
 
-        public override void SetElementsFromConsole()
+        public abstract void Display();
+        public virtual double GetMax() => _elements.Length > 0 ? _elements.Max() : double.NaN;
+
+        public double[] ElementsCopy() => (double[])_elements.Clone();
+    }
+
+    // Клас Vector4
+    public class Vector4 : NumericStructure
+    {
+        private const int DefaultSize = 4;
+
+        public Vector4() : base(DefaultSize)
         {
-            Console.WriteLine($"\nВведіть {_size} елементів вектора:");
-            for (int i = 0; i < _size; i++)
-            {
-                Console.Write($"Елемент [{i}] = ");
-                while (!double.TryParse(Console.ReadLine(), out _elements[i]))
-                    Console.Write("Некоректне значення, повторіть: ");
-            }
+            Console.WriteLine("[Створено Vector4]");
         }
 
         public override void Display()
         {
             Console.WriteLine("\n--- Вектор ---");
-            Console.WriteLine(ToString());
+            Console.WriteLine(string.Join(", ", Elements.Select(e => e.ToString("F2"))));
+        }
+
+        // Індексатор для доступу до елементів
+        public double this[int index]
+        {
+            get
+            {
+                if (index < 0 || index >= Size)
+                    throw new IndexOutOfRangeException();
+                return Elements[index];
+            }
+            set
+            {
+                if (index < 0 || index >= Size)
+                    throw new IndexOutOfRangeException();
+                Elements[index] = value;
+            }
         }
     }
 
-    /// <summary>
-    /// Клас Matrix4x4 — спадкоємець NumericStructure.
-    /// Представляє матрицю розміром 4x4.
-    /// </summary>
+    // Клас Matrix4x4
     public class Matrix4x4 : NumericStructure
     {
-        private const int MATRIX_DIMENSION = 4;
-        private int _rows;
-        private int _cols;
+        private const int MatrixDimension = 4;
+        public int Rows { get; } = MatrixDimension;
+        public int Cols { get; } = MatrixDimension;
 
-        public Matrix4x4() : base(MATRIX_DIMENSION * MATRIX_DIMENSION)
+        public Matrix4x4() : base(MatrixDimension * MatrixDimension)
         {
-            _rows = MATRIX_DIMENSION;
-            _cols = MATRIX_DIMENSION;
-            Console.WriteLine("[Конструктор Matrix4x4] Створено матрицю 4x4.");
-        }
-
-        ~Matrix4x4()
-        {
-            Console.WriteLine("[Деструктор Matrix4x4] Матрицю знищено.");
-        }
-
-        public override void SetElements(double[] values)
-        {
-            if (values == null || values.Length != _size)
-                throw new ArgumentException($"Розмір масиву ({values?.Length ?? 0}) не відповідає {_size} елементам матриці.");
-
-            Array.Copy(values, _elements, _size);
-            Console.WriteLine($"Успішно встановлено {_size} елементів матриці.");
-        }
-
-        public override void SetElementsFromConsole()
-        {
-            Console.WriteLine($"\nВведіть елементи матриці {_rows}x{_cols}:");
-            for (int i = 0; i < _rows; i++)
-            {
-                for (int j = 0; j < _cols; j++)
-                {
-                    int index = i * _cols + j;
-                    Console.Write($"Елемент [{i},{j}] = ");
-                    while (!double.TryParse(Console.ReadLine(), out _elements[index]))
-                        Console.Write("Некоректне значення, повторіть: ");
-                }
-            }
+            Console.WriteLine("[Створено Matrix4x4]");
         }
 
         public override void Display()
         {
             Console.WriteLine("\n--- Матриця 4x4 ---");
-            for (int i = 0; i < _rows; i++)
+            for (int i = 0; i < Rows; i++)
             {
-                for (int j = 0; j < _cols; j++)
-                    Console.Write($"{_elements[i * _cols + j],8:F2}");
+                for (int j = 0; j < Cols; j++)
+                    Console.Write($"{Elements[i * Cols + j],8:F2}");
                 Console.WriteLine();
+            }
+        }
+
+        public double this[int row, int col]
+        {
+            get
+            {
+                if (row < 0 || row >= Rows || col < 0 || col >= Cols)
+                    throw new IndexOutOfRangeException();
+                return Elements[row * Cols + col];
+            }
+            set
+            {
+                if (row < 0 || row >= Rows || col < 0 || col >= Cols)
+                    throw new IndexOutOfRangeException();
+                Elements[row * Cols + col] = value;
             }
         }
     }
 
-    /// <summary>
-    /// Демонстрація роботи з абстрактним класом NumericStructure.
-    /// </summary>
     public static class Program
     {
         public static void Main()
         {
-            Console.OutputEncoding = Encoding.UTF8;
+            List<IStructure> shapes = new List<IStructure>();
 
-            List<NumericStructure> shapes = new List<NumericStructure>();
-
-            Console.WriteLine("\n--- СТВОРЕННЯ ВЕКТОРА ---");
             Vector4 vector = new Vector4();
             vector.SetElements(new double[] { 2.5, -1.3, 4.8, 0.0 });
             shapes.Add(vector);
 
-            Console.WriteLine("\n--- СТВОРЕННЯ МАТРИЦІ ---");
             Matrix4x4 matrix = new Matrix4x4();
             matrix.SetElements(new double[] {
                 1.1, 2.2, 3.3, 4.4,
@@ -179,18 +139,13 @@ namespace OOP_Lab3
             });
             shapes.Add(matrix);
 
-            Console.WriteLine("\n==========================================");
-            Console.WriteLine("ВИКЛИК МЕТОДІВ ЧЕРЕЗ КОЛЕКЦІЮ (ПОЛІМОРФІЗМ)");
-            Console.WriteLine("==========================================");
-
+            Console.WriteLine("\n--- Поліморфізм через інтерфейс ---");
             foreach (var obj in shapes)
             {
                 obj.Display();
                 Console.WriteLine($"Максимальний елемент: {obj.GetMax():F2}");
             }
-
-            // Неможливо створити екземпляр абстрактного класу:
-            // NumericStructure test = new NumericStructure(4); // ❌ Помилка компіляції
         }
     }
 }
+
